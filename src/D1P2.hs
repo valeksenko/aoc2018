@@ -3,13 +3,12 @@ module D1P2 (
 ) where
 
 import Data.List
+import Control.Applicative
 
-findfrequency :: (Eq a, Num a) => [a] -> a
-findfrequency = last . head . dropWhile uniq . inits . scanl (+) 0 . cycle
+findfrequency :: (Eq a, Num a) => [a] -> Maybe a
+findfrequency = findDup [] . scanl (+) 0 . cycle
     where
-        uniq [] = True
-        uniq l  = notElem (last l) $ init l
-
+        findDup l (x:xs) = find (== x) l <|> findDup (x:l) xs
 {-
 https://adventofcode.com/2018/day/1#part2
 
