@@ -4,15 +4,16 @@ module D2P2 (
 
 import Data.List
 import Data.Tuple
-import Control.Monad
+import Control.Applicative
 
 letters :: [String] -> Maybe String
-letters l = (msum $ pairs l) >>= Just . map fst . filter (uncurry (==)) . uncurry zip
+letters l = (pair l) >>= Just . dupLetters
     where
-        pairs [] = [Nothing]
-        pairs (x:xs) = (pair x xs) : pairs xs
-        pair x xs = find ((==) 1 . uniq x) xs >>= curry Just x
+        pair [] = Nothing
+        pair (x:xs) = findPair x xs <|> pair xs
+        findPair x xs = find ((==) 1 . uniq x) xs >>= curry Just x
         uniq x y = length . filter (uncurry (/=)) $ zip x y
+        dupLetters = map fst . filter (uncurry (==)) . uncurry zip
 
 {-
 https://adventofcode.com/2018/day/2#part2
