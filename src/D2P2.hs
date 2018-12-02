@@ -7,11 +7,10 @@ import Data.Tuple
 import Control.Applicative
 
 letters :: [String] -> Maybe String
-letters l = (pair l) >>= Just . dupLetters
+letters l = (pair [] l) >>= Just . dupLetters
     where
-        pair [] = Nothing
-        pair (x:xs) = findPair x xs <|> pair xs
-        findPair x xs = find ((==) 1 . uniq x) xs >>= curry Just x
+        pair l (x:xs) = findPair x l <|> pair (x:l) xs
+        findPair x l = find ((==) 1 . uniq x) l >>= curry Just x
         uniq x y = length . filter (uncurry (/=)) $ zip x y
         dupLetters = map fst . filter (uncurry (==)) . uncurry zip
 
