@@ -7,8 +7,9 @@ import Data.List
 checksum :: [String] -> Int
 checksum ids = product $ map count [2, 3]
     where
-        count amount = length $ filter (seq amount) ids
-        seq amount = any ((== amount) . length) . group . sort
+        count amount = length $ filter (seq amount) groupped
+        seq amount   = any ((== amount) . length)
+        groupped     = map (group . sort) ids
 
 {-
 https://adventofcode.com/2018/day/2
