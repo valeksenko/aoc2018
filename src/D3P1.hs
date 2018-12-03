@@ -15,25 +15,24 @@ data Claim =
 fabricSize = 1000 :: Int
 
 overlaps :: [Claim] -> Int
-overlaps = count . foldr addClaim newFabric
+overlaps claims = count $ map applyClaims newFabric
     where
-        newFabric = zip (replicate (fabricSize * fabricSize) 0) [0..]
+        newFabric = zip (replicate (fabricSize * fabricSize) 0) $ map coordinate [0..]
+        coordinate i = (i `mod` fabricSize, i `div` fabricSize)
+        applyClaims cell = foldr addClaim cell claims
         count = length . filter ((>1) . fst)
 
-addClaim :: Claim -> [(Int, Int)] -> [(Int, Int)]
-addClaim claim = map coverage
+addClaim :: Claim -> (Int, (Int, Int)) -> (Int, (Int, Int))
+addClaim claim (val, coord) = if (covered coord) then (val + 1, coord) else (val, coord)
     where
-        coverage (cell, ind) = if (covered ind) then (cell + 1, ind) else (cell, ind)
-        x i = i `mod` fabricSize
-        y i = i `div` fabricSize
-        covered i = (
-                (leftShift claim) <= (x i)
+        covered (x, y) = (
+                (topShift claim) + (height claim) > y
             ) && (
-                (leftShift claim) + (width claim) > (x i)
+                (topShift claim) <= y
             ) && (
-                (topShift claim) <= (y i)
+                (leftShift claim) + (width claim) > x
             ) && (
-                (topShift claim) + (height claim) > (y i)
+                (leftShift claim) <= x
             )
 
 {-
