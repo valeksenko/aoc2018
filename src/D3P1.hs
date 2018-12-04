@@ -1,18 +1,8 @@
 module D3P1 (
     overlaps
-  , Claim(..)
 ) where
 
-data Claim =
-    Claim {
-        claimId    :: String
-      , leftShift  :: Int
-      , topShift   :: Int
-      , width      :: Int
-      , height     :: Int
-    } deriving(Show, Eq)
-
-fabricSize = 1000 :: Int
+import D3
 
 overlaps :: [Claim] -> Int
 overlaps claims = count $ map applyClaims newFabric
