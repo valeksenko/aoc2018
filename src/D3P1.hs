@@ -3,22 +3,16 @@ module D3P1 (
 ) where
 
 import D3
+import Data.List
 
 overlaps :: [Claim] -> Int
-overlaps claims = foldr applyClaims 0 $ map coordinate [0..(fabricSize * fabricSize) - 1]
+overlaps claims = length . filter many . group . sort $ concatMap coordinates claims
     where
-        coordinate i = (i `mod` fabricSize, i `div` fabricSize)
-        applyClaims cell total = if (manyCovered cell) then total + 1 else total
-        manyCovered cell = any (covered cell) . drop 1 $ dropWhile (not . covered cell) claims
-        covered (x, y) claim = (
-                (topShift claim) + (height claim) > y
-            ) && (
-                (topShift claim) <= y
-            ) && (
-                (leftShift claim) + (width claim) > x
-            ) && (
-                (leftShift claim) <= x
-            )
+        many = (>1) . length
+        coordinates claim = concatMap (coord claim) $ yCoord claim
+        coord claim y     = map (\x -> y * fabricSize + x) $ xCoord claim
+        xCoord claim      = [(leftShift claim)..((leftShift claim) + (width claim) - 1)]
+        yCoord claim      = [(topShift claim)..((topShift claim) + (height claim) - 1)]
 
 {-
 https://adventofcode.com/2018/day/3
