@@ -7,20 +7,16 @@ import Data.List
 import Control.Applicative
 
 uniq :: [Claim] -> Maybe String
-uniq claims = (findUniq (length claims) $ map coordinates claims) >>= Just . claimId
-    where 
+uniq claims = (find uniqClaim claimCoordinates) >>= Just . claimId . fst
+    where
+        uniqClaim claim   = length (findDups $ (snd claim) ++ dups) == 0
+        dups              = map head . findDups $ concatMap snd claimCoordinates
+        findDups          = filter ((>1) . length) . group . sort
+        claimCoordinates  = map coordinates claims
         coordinates claim = (claim, concatMap (coord claim) $ yCoord claim)
         coord claim y     = map (\x -> y * fabricSize + x) $ xCoord claim
         xCoord claim      = [(leftShift claim)..((leftShift claim) + (width claim) - 1)]
         yCoord claim      = [(topShift claim)..((topShift claim) + (height claim) - 1)]
-
-findUniq :: Int -> [(Claim, [Int])] -> Maybe Claim
-findUniq 0 _ = Nothing
-findUniq ind claims = uniqClaim claims <|> findUniq (ind - 1) (nextClaims claims)
-    where
-        nextClaims (x:xs)    = xs ++ [x]
-        uniqClaim (x:xs)     = if all (noDups x) xs then (Just $ fst x) else Nothing
-        noDups (_, x) (_, y) = length (x `intersect` y) == 0
 
 {-
 https://adventofcode.com/2018/day/3#part2
