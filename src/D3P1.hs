@@ -5,17 +5,12 @@ module D3P1 (
 import D3
 
 overlaps :: [Claim] -> Int
-overlaps claims = count $ map applyClaims newFabric
+overlaps claims = foldr applyClaims 0 $ map coordinate [0..(fabricSize * fabricSize) - 1]
     where
-        newFabric = zip (replicate (fabricSize * fabricSize) 0) $ map coordinate [0..]
         coordinate i = (i `mod` fabricSize, i `div` fabricSize)
-        applyClaims cell = foldr addClaim cell claims
-        count = length . filter ((>1) . fst)
-
-addClaim :: Claim -> (Int, (Int, Int)) -> (Int, (Int, Int))
-addClaim claim (val, coord) = if (covered coord) then (val + 1, coord) else (val, coord)
-    where
-        covered (x, y) = (
+        applyClaims cell total = if (manyCovered cell) then total + 1 else total
+        manyCovered cell = any (covered cell) . drop 1 $ dropWhile (not . covered cell) claims
+        covered (x, y) claim = (
                 (topShift claim) + (height claim) > y
             ) && (
                 (topShift claim) <= y
