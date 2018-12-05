@@ -60,15 +60,10 @@ idtime2 log = findGuard >>= Just . guardMinute
 sortedLog :: [GuardLog] -> [GuardLog]
 sortedLog = sortBy cmpTime
     where
-        cmpTime (Starts _ x) (Starts _ y) = cmp x y
-        cmpTime (Starts _ x) (Sleeps y)   = cmp x y
-        cmpTime (Starts _ x) (Wakes y)    = cmp x y
-        cmpTime (Sleeps x) (Starts _ y)   = cmp x y
-        cmpTime (Sleeps x) (Sleeps y)     = cmp x y
-        cmpTime (Sleeps x) (Wakes y)      = cmp x y
-        cmpTime (Wakes x) (Starts _ y)    = cmp x y
-        cmpTime (Wakes x) (Sleeps y)      = cmp x y
-        cmpTime (Wakes x) (Wakes y)       = cmp x y
+        cmpTime x y        = cmp (lTime x) (lTime y)
+        lTime (Starts _ t) = t
+        lTime (Sleeps t)   = t
+        lTime (Wakes t)    = t
         cmp x y
             | ((lDate x) == (lDate y)) && ((lHour x) == (lHour y)) = compare (lMinute x) (lMinute y)
             | ((lDate x) == (lDate y)) = compare (lHour x) (lHour y)
