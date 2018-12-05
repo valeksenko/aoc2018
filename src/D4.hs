@@ -44,11 +44,10 @@ idtime1 log = findGuard >>= Just . guardMinute
     where
         findGuard       = Just . fst . maximumBy (comparing snd) $ map guardDuration compLog
         guardDuration e = (guardId $ head e, duration e)
-        duration e      = foldr (\x d -> d + (sleepDuration x)) 0 e
+        duration        = foldr (\x d -> d + (sleepDuration x)) 0
         compLog         = guardLog log
         guardMinute g   = g * (minute g)
-        minute g        = head . maximumBy (comparing length) . group . sort . concatMap minutes $ guardRecords g
-        minutes e       = take (sleepDuration e) [(startMinute e)..]
+        minute          = head . maxMinute . guardRecords
         guardRecords g  = concat $ filter ((==) g . guardId . head) compLog
 
 idtime2 :: [GuardLog] -> Maybe Int
@@ -57,8 +56,6 @@ idtime2 log = findGuard >>= Just . guardMinute
         findGuard     = Just . maximumBy (comparing minuteAmount) . map minute $ guardLog log
         guardMinute g = (minuteGuardId g) * (minuteMax g)
         minute l      = uncurry (GuardMinute (guardId $ head l)) $ (head &&& length) (maxMinute l)
-        maxMinute     = maximumBy (comparing length) . group . sort . concatMap minutes
-        minutes e     = take (sleepDuration e) [(startMinute e)..]
 
 sortedLog :: [GuardLog] -> [GuardLog]
 sortedLog = sortBy cmpTime
@@ -91,6 +88,11 @@ guardLog :: [GuardLog] -> [[CompactLog]]
 guardLog = groupBy guardCmp . sortBy (comparing guardId) . compactLog
     where
         guardCmp x y = (guardId x) == (guardId y)
+
+maxMinute :: [CompactLog] -> [Int]
+maxMinute = maximumBy (comparing length) . group . sort . concatMap minutes
+    where
+        minutes e = take (sleepDuration e) [(startMinute e)..]
 
 {-
 https://adventofcode.com/2018/day/4
