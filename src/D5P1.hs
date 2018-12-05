@@ -6,13 +6,14 @@ import Data.List
 import Data.Char
 
 polymersize :: String -> Int
-polymersize = length . pSize []
+polymersize p = length $ reduceP (length p) p (reduce p)
     where
-        pSize p []       = p
-        pSize p [e]      = e:p
-        pSize p (x:y:xs) = if (diffCase x y) then pSize [] ((reverse p) ++ xs) else pSize (x:p) (y:xs)
-        diffCase x y     = x == (flipCase y)
-        flipCase x       = if isLower x then toUpper x else toLower x
+        reduceP l p r    = if (length r) == l then p else reduceP (length r) r (reduce r)
+        reduce []       = []
+        reduce [e]      = [e]
+        reduce (x:y:xs) = if (diffCase x y) then (reduce xs) else x:(reduce (y:xs))
+        diffCase x y    = x == (flipCase y)
+        flipCase x      = if isLower x then toUpper x else toLower x
 
 
 {-
