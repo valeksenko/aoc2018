@@ -6,12 +6,10 @@ import Data.List
 import Data.Char
 
 polymersize :: String -> Int
-polymersize p = length $ reduceP (length p) p (reduce p)
+polymersize = length . foldr reduce []
     where
-        reduceP l p r    = if (length r) == l then p else reduceP (length r) r (reduce r)
-        reduce []       = []
-        reduce [e]      = [e]
-        reduce (x:y:xs) = if (diffCase x y) then (reduce xs) else x:(reduce (y:xs))
+        reduce x []     = [x]
+        reduce x a@(y:ys) = if (diffCase x y) then ys else x:a
         diffCase x y    = x == (flipCase y)
         flipCase x      = if isLower x then toUpper x else toLower x
 
