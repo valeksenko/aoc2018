@@ -14,33 +14,18 @@ data Point =
       , pSeed  :: Coord
     } deriving(Show, Eq)
 
-data Grid =
-    Grid {
-        gSeeds  :: [Coord]
-      , gPoints :: [Point]
-      , minX  :: Int
-      , maxX   :: Int
-      , minY  :: Int
-      , maxY   :: Int
-    } deriving(Show, Eq)
-
 largestarea :: [Coord] -> Int
-largestarea = length . largestA . newGrid
+largestarea seeds = length . last . sortBy (comparing length) . group . sort $ internalPoints seeds minX maxX minY maxY
     where
-        largestA g = last . sortBy (comparing length) . group . sort $ nonEdges g
+        minX = fst $ minimumBy (comparing fst) seeds
+        maxX = fst $ maximumBy (comparing fst) seeds
+        minY = snd $ minimumBy (comparing snd) seeds
+        maxY = snd $ maximumBy (comparing snd) seeds
 
-newGrid :: [Coord] -> Grid
-newGrid seeds = Grid seeds points minX maxX minY maxY
+internalPoints :: [Coord] -> Int -> Int -> Int -> Int -> [Coord]
+internalPoints seeds minX maxX minY maxY = internalSeeds seeds minX maxX minY maxY points
     where
-        minX   = fst $ minimumBy (comparing fst) seeds
-        maxX   = fst $ maximumBy (comparing fst) seeds
-        minY   = snd $ minimumBy (comparing snd) seeds
-        maxY   = snd $ maximumBy (comparing snd) seeds
-        points = gridPoints seeds minX maxX minY maxY
-
-gridPoints :: [Coord] -> Int -> Int -> Int -> Int -> [Point]
-gridPoints seeds minX maxX minY maxY = foldr point [] [(x, y) | x <- [minX..maxX], y <- [minY..maxY]]
-    where
+        points           = foldr point [] [(x, y) | x <- [minX..maxX], y <- [minY..maxY]]
         point p a        = shortest p a $ shortests p
         shortest p a [e] = (Point p (snd e)):a
         shortest _ a _   = a
@@ -48,15 +33,15 @@ gridPoints seeds minX maxX minY maxY = foldr point [] [(x, y) | x <- [minX..maxX
         sDistance p s    = ((distance fst p s) + (distance snd p s), s)
         distance f a b   = abs $ (f a) - (f b)
 
-nonEdges :: Grid -> [Coord]
-nonEdges g = filter (limitedSeed g) $ map pSeed (gPoints g)
+internalSeeds :: [Coord] -> Int -> Int -> Int -> Int -> [Point] -> [Coord]
+internalSeeds seeds minX maxX minY maxY points = filter internalSeed $ map pSeed points
     where
-        limitedSeed g s = notElem s seedEdges
-        seedEdges = map head . group . sort . map pSeed . filter edge $ gPoints g
-        edge p = ((fst $ pCoord p) == (minX g))
-                    || ((fst $ pCoord p) == (maxX g))
-                    || ((snd $ pCoord p) == (minY g))
-                    || ((snd $ pCoord p) == (maxY g))
+        internalSeed s = notElem s edgeSeeds
+        edgeSeeds = map head . group . sort . map pSeed $ filter edge points
+        edge p = ((fst $ pCoord p) == minX)
+                    || ((fst $ pCoord p) == maxX)
+                    || ((snd $ pCoord p) == minY)
+                    || ((snd $ pCoord p) == maxY)
 
 {-
 https://adventofcode.com/2018/day/6
