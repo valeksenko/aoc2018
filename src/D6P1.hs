@@ -25,13 +25,10 @@ largestarea seeds = length . last . sortBy (comparing length) . group . sort $ i
 internalPoints :: [Coord] -> Int -> Int -> Int -> Int -> [Coord]
 internalPoints seeds minX maxX minY maxY = internalSeeds seeds minX maxX minY maxY points
     where
-        points           = foldr point [] [(x, y) | x <- [minX..maxX], y <- [minY..maxY]]
-        point p a        = shortest p a $ shortests p
-        shortest p a [e] = (Point p (snd e)):a
-        shortest _ a _   = a
-        shortests p      = head . groupBy ((==) `on` fst) . sortBy (comparing fst) $ map (sDistance p) seeds
-        sDistance p s    = ((distance fst p s) + (distance snd p s), s)
-        distance f a b   = abs $ (f a) - (f b)
+        points         = map (snd . head) . filter ((==) 1 . length) $ map shortest [(x, y) | x <- [minX..maxX], y <- [minY..maxY]]
+        shortest p     = head . groupBy ((==) `on` fst) . sortBy (comparing fst) $ map (sDistance p) seeds
+        sDistance p s  = ((distance fst p s) + (distance snd p s), Point p s)
+        distance f a b = abs $ (f a) - (f b)
 
 internalSeeds :: [Coord] -> Int -> Int -> Int -> Int -> [Point] -> [Coord]
 internalSeeds seeds minX maxX minY maxY points = filter internalSeed $ map pSeed points
