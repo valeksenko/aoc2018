@@ -5,7 +5,6 @@ module D7P1 (
 import Data.List
 import Data.Ord
 import Data.Function
-import Debug.Trace
 
 type StepId = Char
 
