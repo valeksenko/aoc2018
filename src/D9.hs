@@ -1,11 +1,11 @@
-module D9P1 (
+module D9 (
   winscore
 ) where
 
 import Data.List
-import Control.Lens
 import Data.Ord
 import Data.Function
+import qualified Data.Sequence as S
 
 scoreNum = 23
 shiftNum = 7
@@ -13,14 +13,14 @@ shiftNum = 7
 data Game =
     Game {
         gPos   :: Int
-      , gBoard :: [Int]
-      , gScore :: [Int]
+      , gBoard :: S.Seq Int
+      , gScore :: S.Seq Int
     } deriving(Show, Eq)
 
 winscore :: Int -> Int -> Int
 winscore nMarble aPlayers = winner . foldl turn newGame $ take nMarble [1..]
     where
-        newGame = Game 0 [0] (replicate aPlayers 0)
+        newGame = Game 0 (S.singleton 0) (S.replicate aPlayers 0)
         winner  = maximum . gScore
 
 turn :: Game -> Int -> Game
@@ -29,26 +29,19 @@ turn game marble = toGame placeM
         placeM = if (marble `mod` scoreNum) == 0 then scoreMove marble game else regularMove marble game
         toGame (pos, board, scoreM) = Game pos board (score $ sum scoreM)
         score 0 = gScore game
-        score s = (element $ marble `mod` (length $ gScore game)) %~ (+ s) $ gScore game
+        score s = S.adjust' (+ s) (marble `mod` (length $ gScore game)) $ gScore game
 
-regularMove :: Int -> Game -> (Int, [Int], [Int])
+regularMove :: Int -> Game -> (Int, S.Seq Int, [Int])
 regularMove marble game = (newPos, addMarble, [])
     where
         newPos = (((gPos game) + 1) `mod` (length $ gBoard game)) + 1
-        addMarble = insertAt newPos marble $ gBoard game
+        addMarble = S.insertAt newPos marble $ gBoard game
 
-scoreMove :: Int -> Game -> (Int, [Int], [Int])
-scoreMove marble game = (newPos, removeMarble, [marble, (gBoard game) ^?! element newPos])
+scoreMove :: Int -> Game -> (Int, S.Seq Int, [Int])
+scoreMove marble game = (newPos, removeMarble, [marble, S.index (gBoard game) newPos])
     where
         newPos = ((gPos game) - shiftNum + length (gBoard game)) `mod` (length $ gBoard game)
-        removeMarble = removeAt newPos $ gBoard game
-
-insertAt :: Int -> Int -> [Int] -> [Int]
-insertAt pos v l = (take pos l) ++ (v:(drop pos l))
-
-removeAt :: Int -> [Int] -> [Int]
-removeAt 0 l = tail l
-removeAt pos l = (take pos l) ++ (drop (pos + 1) l)
+        removeMarble = S.deleteAt newPos $ gBoard game
 
 {-
 https://adventofcode.com/2018/day/9
