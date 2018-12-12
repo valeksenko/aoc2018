@@ -1,14 +1,36 @@
-module D11P1 (
-  powersquare
+module D11 (
+    newGrid
+  , squarePower
+  , gridSize
+  , Coordinate
+  , Power
 ) where
 
-import D11
-import qualified Data.Sequence as S
+import Data.List
+import Data.Ord
+import qualified Data.Array as A
 
-squareSize = 3
+gridSize = 300
 
-powersquare :: Int -> Coordinate
-powersquare = fst . squarePower squareSize . newGrid
+type Power = Int
+type Coordinate = (Int, Int)
+
+squarePower :: Int -> A.Array Int (Coordinate, Power) -> (Coordinate, Power)
+squarePower squareSize grid = maximumBy (comparing snd) $ map square points
+    where
+        square n  = (fst $ (A.!) grid n, sPower n)
+        sPower n  = sum $ sPoints n
+        sPoints n = map (snd . (A.!) grid) [x + (y * gridSize) | y <- (take squareSize [n `div` gridSize..]), x <- (take squareSize [n `mod` gridSize..])]
+        points    = [x + (y * gridSize) | y <- [0..gridSize - squareSize], x <- [0..gridSize - squareSize]]
+
+newGrid :: Int -> A.Array Int (Coordinate, Power)
+newGrid serialNum = A.listArray (0, (gridSize * gridSize) - 1) $ map power [(x, y) | x <- [1..gridSize], y <- [1..gridSize]]
+    where
+        power c = (c, powerLevel c)
+        powerLevel (x, y) = (hundreds $ ((x + 10) * y + serialNum) * (x + 10)) - 5
+        hundreds n = (n `div` 100) `mod` 10
+
+
 
 {-
 https://adventofcode.com/2018/day/11
