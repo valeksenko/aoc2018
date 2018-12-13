@@ -1,18 +1,26 @@
-module D12P1 (
+module D12 (
   potsum
 ) where
 
 import Data.List
 import Data.Maybe
+import qualified Data.Vector as V
 
 ruleSize = 5
 
 potsum :: [Bool] -> Int -> [([Bool], Bool)] -> Int
-potsum garden iterations rules = sum . map snd . filter fst $ foldr generation (zip garden [0..]) [1..iterations]
+potsum garden iterationsNum rules = sum . map snd $ filter fst lastGen
     where
-        generation i = map applyRules . chunks . extendGarden
-        applyRules c = (maybe False id $ lookup (map fst c) rules, (snd $ head c) + 2)
-        chunks g = map (\n -> take ruleSize $ drop n g) [0..(length g) - 1]
+        lastGen =  lastGeneration optimizedRules (zip garden [0..]) [1..iterationsNum]
+        optimizedRules = V.fromList . map fst $ filter snd rules
+
+lastGeneration :: V.Vector [Bool] -> [(Bool, Int)] -> [Int] -> [(Bool, Int)]
+lastGeneration rules garden iterations = foldl' generation garden iterations
+    where
+        generation g i = applyRules [] $ extendGarden g
+        applyRules a [] = reverse a
+        applyRules a g@(x:xs) = applyRules ((applyR . map fst $ take ruleSize g, (snd x) + 2):a) xs
+        applyR l = V.elem l rules 
 
 extendGarden :: [(Bool, Int)] -> [(Bool, Int)]
 extendGarden g = (extendLeft $ take (ruleSize - 1) g) ++ g ++ (extendRight $ drop (length g - ruleSize + 1) g)
