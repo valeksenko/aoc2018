@@ -1,41 +1,10 @@
 module Main where
 
-import D12
+import D13P1
+import Data.Tuple
 
 main :: IO ()
 main = do
-    putStrLn . show $ D12.potsum [True, False, False, False, True, True, True, True, True, False, True, False, False, True, True, False, False, False, True, True, False, False, False, True, False, True, True, False, True, False, True, True, False, True, True, True, False, False, True, True, False, True, True, False, True, False, True, False, False, True, False, False, False, True, True, True, False, False, True, True, True, True, False, True, False, False, False, False, False, True, False, False, True, True, False, False, True, False, True, True, False, False, False, False, False, False, True, True, True, True, True, False, False, True, True, True, True, False, False, False] 50000000000 [
-            ([True, False, True, False, True], True),
-            ([False, False, True, True, True], False),
-            ([True, False, False, True, False], True),
-            ([False, True, False, False, False], True),
-            ([False, False, True, True, False], True),
-            ([True, True, False, True, False], True),
-            ([True, True, False, False, True], True),
-            ([True, True, True, True, False], True),
-            ([False, False, False, True, False], True),
-            ([False, False, True, False, True], True),
-            ([False, True, True, True, True], True),
-            ([True, False, True, True, True], False),
-            ([False, False, False, True, True], False),
-            ([False, False, True, False, False], False),
-            ([True, False, False, False, True], False),
-            ([False, True, True, True, False], True),
-            ([False, True, False, True, True], False),
-            ([False, True, True, False, False], True),
-            ([False, False, False, False, True], False),
-            ([True, False, False, True, True], False),
-            ([True, True, False, True, True], True),
-            ([True, False, True, True, False], False),
-            ([True, False, False, False, False], False),
-            ([True, True, False, False, False], True),
-            ([False, True, False, True, False], False),
-            ([True, True, True, False, True], True),
-            ([True, True, True, True, True], True),
-            ([True, False, True, False, False], False),
-            ([False, False, False, False, False], False),
-            ([False, True, True, False, True], False),
-            ([True, True, True, False, False], False),
-            ([False, True, False, False, True], False)
-        ]
+    f <- readFile "data/d13.txt"
+    putStrLn . show . uncurry firstcrash $ parseTrack f
     putStrLn "Done"
