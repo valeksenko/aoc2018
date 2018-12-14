@@ -5,6 +5,7 @@ module D12 (
 import Data.List
 import Data.Maybe
 import qualified Data.Vector as V
+import Debug.Trace
 
 ruleSize = 5
 
@@ -18,9 +19,10 @@ lastGeneration :: V.Vector [Bool] -> [(Bool, Int)] -> [Int] -> [(Bool, Int)]
 lastGeneration rules garden iterations = foldl' generation garden iterations
     where
         generation g i = applyRules [] $ extendGarden g
+        -- generation g i = showGarden . applyRules [] $ extendGarden g
         applyRules a [] = reverse a
         applyRules a g@(x:xs) = applyRules ((applyR . map fst $ take ruleSize g, (snd x) + 2):a) xs
-        applyR l = V.elem l rules 
+        applyR l = V.elem l rules
 
 extendGarden :: [(Bool, Int)] -> [(Bool, Int)]
 extendGarden g = (extendLeft $ take (ruleSize - 1) g) ++ g ++ (extendRight $ drop (length g - ruleSize + 1) g)
@@ -29,6 +31,12 @@ extendGarden g = (extendLeft $ take (ruleSize - 1) g) ++ g ++ (extendRight $ dro
         extendRight l = addFalse (fstTrue $ reverse l) (snd $ last l) (+ 1)
         fstTrue l = maybe (ruleSize - 1) snd . find (fst . fst) $ zip l [0..]
         addFalse n i f = reverse . map (\k -> (False, k)) $ take (ruleSize - n - 1) [f i, f (f i) ..]
+
+-- showGarden :: [(Bool, Int)] -> [(Bool, Int)]
+-- showGarden g = traceShow (map (\c -> if (fst c) then '#' else '.') g) g
+
+-- Note: the pattern emerges between 100 & 200 with one cell keep moving right increasing the sum by 86.
+-- The sum at 200 is 17549, so (50000000000-200)*86 + 17549 = 4300000000349
 
 {-
 https://adventofcode.com/2018/day/12
