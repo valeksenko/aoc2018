@@ -5,6 +5,7 @@ module D13P1Spec (
 import Test.Tasty
 import Test.Tasty.HUnit
 
+import D13
 import D13P1
 
 tests :: TestTree
