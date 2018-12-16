@@ -23,6 +23,7 @@ import qualified D13P1Spec
 import qualified D13P2Spec
 import qualified D14P1Spec
 import qualified D14P2Spec
+import qualified D15P1Spec
 
 main :: IO ()
 main = defaultMain tests
@@ -54,4 +55,5 @@ tests = testGroup "Tests"
       , D13P2Spec.tests
       , D14P1Spec.tests
       , D14P2Spec.tests
+      , D15P1Spec.tests
     ]
