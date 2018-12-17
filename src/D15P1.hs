@@ -7,7 +7,8 @@ module D15P1 (
 
 import Data.List
 import Data.Maybe
-import Data.Function
+import Data.Function (on)
+import Data.Monoid ((<>))
 import Data.Ord
 import Data.Sequence ((|>), (<|))
 import qualified Data.Sequence as S
@@ -37,10 +38,10 @@ battlescore :: S.Seq Coordinate -> S.Seq Npc -> Int
 battlescore positions npcs  = score $ until winnerOnly (nextRound positions) (0, npcs)
     where
         winnerOnly (_, npcs) = (== 1) . length . group . sort . toList $ fmap nType npcs
-        score (cnt, npcs) = (cnt - 1) * traceShowId (sum . toList $ fmap nHP npcs)
+        score (cnt, npcs) = (cnt - 1) * (sum . toList $ fmap nHP npcs)
 
 nextRound :: S.Seq Coordinate -> (Int, S.Seq Npc) -> (Int, S.Seq Npc)
-nextRound positions (cnt, npcs) = traceShow cnt $ (cnt + 1, getNpcs . foldl' takeTurn npcBoard $ S.sortOn nPos npcs)
+nextRound positions (cnt, npcs) = (cnt + 1, getNpcs . foldl' takeTurn npcBoard $ S.sortOn nPos npcs)
     where
         npcBoard = foldr (\p b -> boardP p <| b) S.empty positions
         boardP p = case (S.elemIndexL p $ fmap nPos npcs) of
@@ -59,31 +60,37 @@ takeTurn board npc = maybe board (attack board . move board) $ findNpc (toList b
         findNpc (x:xs) = findNpc xs
 
 move :: S.Seq BoardPosition -> (Npc, Coordinate, Int) -> (Npc, Coordinate, Int)
-move board (npc, pos, hp) = moveNpc . shortestPath . catMaybes . map (destPath . fst) $ findEnemies npc board
-    where
+move board (npc, pos, hp) = moveNpc . closestEnemy $ findEnemies npc board
+    where 
         moveNpc Nothing = (npc, pos, hp)
-        moveNpc (Just (x:xs)) = (npc, (if null xs then pos else x), hp)
-        shortestPath [] = Nothing
-        shortestPath l = Just . head . sort . head . groupBy ((==) `on` length) $ sortBy (comparing length) l
-        destPath dst = shortestPath . filter (arrived dst) . allPaths pos dst $ foldr freePos [] board
-        arrived p [] = False
-        arrived p l = p == last l
-        freePos (Open p) l = p:l
-        freePos (Occupied _ p h ) l = if hp > 0 then l else p:l
+        moveNpc (Just []) = (npc, pos, hp)
+        moveNpc (Just l) = (npc, head l, hp)
+        closestEnemy = closestE . catMaybes . map (shortestPath board pos . fst)
+        closestE [] = Nothing
+        closestE l = Just . head $ sortBy cmpListByReading l
 
-allPaths :: Coordinate -> Coordinate -> [Coordinate] -> [[Coordinate]]
-allPaths src dst positions = if closePositions src dst then [[dst]] else followPath $ partition (closePositions src) positions
+shortestPath :: S.Seq BoardPosition -> Coordinate -> Coordinate -> Maybe [Coordinate]
+shortestPath board src dst = nearDst $ freeDistances src board
     where
-        followPath ([], farP) = []
-        followPath (closeP, farP) = concatMap (nextPath farP) closeP
-        nextPath l p = if (closePositions dst p)
-                                    then [[p, dst]]
-                                    else map (p:) $ allPaths p dst l
+        nearDst available = findPath available . sortBy (comparing fst) $ filter (closePositions dst . snd) available
+        findPath _ [] = Nothing
+        findPath available closest = Just . init $ foldr (nextStep available) [dst] [1..fst $ head closest]
+        nextStep available distance l@(pDst:_) = flip (:) l (head . filter (flip any available . closeDistance (distance - 1)) . sort . map snd $ filter (closeDistance distance pDst) available)
+        closeDistance distance pDst (d, p) = (d == distance) && (closePositions p pDst)
+
+freeDistances :: Coordinate -> S.Seq BoardPosition -> [(Int, Coordinate)]
+freeDistances src board = getFree (0, ([src], foldr freePos [] board), [])
+    where
+        getFree (distance, (seeds, available), collected) = if null seeds then collected else getFree (distance + 1, foldr closeFree ([], available) seeds, collected ++ zip (repeat distance) seeds)
+        closeFree p (collected, available) = addFree collected $ partition (closePositions p) available
+        addFree collected (closeP, farP) = (collected ++ closeP, farP)
+        freePos (Open p) l = p:l
+        freePos (Occupied _ p hp) l = if hp > 0 then l else p:l
 
 attack :: S.Seq BoardPosition -> (Npc, Coordinate, Int) -> S.Seq BoardPosition
 attack board (npc, pos, hp) = hit . groupBy ((==) `on` snd) $ sortBy (comparing snd) closeEnemies
     where
-        hit enemies = if (null enemies) then moveNpc board else moveNpc $ hitE (head . sort . map fst $ head enemies)
+        hit enemies = if (null enemies) then moveNpc board else moveNpc $ hitE (head . sortBy (cmpByReading id) . map fst $ head enemies)
         hitE p = fmap (putEnemy p) board
         putEnemy p' bp@(Occupied n p h) = if (p == p') then Occupied n p (h - attackPower) else bp
         putEnemy _ bp = bp
@@ -102,6 +109,12 @@ findEnemies npc = toList . fmap stats . S.filter enemy
         enemy (Occupied n _ hp) = (nType npc) /= (nType n) && (hp > 0)
         enemy _ = False
         stats (Occupied _ p hp) = (p, hp)
+
+cmpListByReading :: [Coordinate] -> [Coordinate] -> Ordering
+cmpListByReading a b = (comparing length a b) <> (compare (map fst a) (map fst b)) <> (compare (map snd a) (map snd b))
+
+cmpByReading :: (b -> Coordinate) -> b -> b -> Ordering
+cmpByReading f = (comparing $ fst . f) <> (comparing $ snd . f)
 
 parseBoard :: String -> (S.Seq Coordinate, S.Seq Npc)
 parseBoard = fst . foldl' parsePoint ((S.empty, S.empty), (0, 0))
