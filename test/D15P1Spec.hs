@@ -6,6 +6,7 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Data.Sequence as S
 
+import D15
 import D15P1
 
 tests :: TestTree
