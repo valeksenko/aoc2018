@@ -7,4 +7,4 @@ main = do
     f <- readFile "data/d18.txt"
     putStrLn . show $ let
                         acres = parseAcres f
-                      in lumbervalue acres
+                      in showLumbervalue 1000 acres

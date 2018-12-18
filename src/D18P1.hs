@@ -1,5 +1,6 @@
 module D18P1 (
     lumbervalue
+  , showLumbervalue
   , parseAcres
   , Acre(..)
 ) where
@@ -7,6 +8,7 @@ module D18P1 (
 import Data.List
 import Data.Function (on)
 import Data.Ord
+import Debug.Trace
 
 type Coordinate = (Int, Int)
 
@@ -15,6 +17,14 @@ data Acre
     | Trees
     | Lumberyard
     deriving(Show, Eq)
+
+-- patern emerges after a few hundred minutes, analizing 900-1000
+-- head . drop (1000000000-1000-1) $ cycle (reverse [197276, 202722, 201000, 206040, 206180, 212711, 214368, 218680, 217448, 220785, 219708, 216804, 214271, 211552, 205771, 204863, 199386, 196860, 192718, 193438, 189090, 190568, 190080, 191649, 190314, 193966, 193781, 196876])
+showLumbervalue :: Int -> [(Acre, Coordinate)] -> Int
+showLumbervalue n area = length $ foldl' showTick area [1..n]
+    where
+        showTick a m = (if m > (n - 100) then traceShow (m, score a) else id) $ tick a m
+        score a = (count Trees a) * (count Lumberyard a)
 
 lumbervalue :: [(Acre, Coordinate)] -> Int
 lumbervalue area = score $ foldl' tick area [1..10]
