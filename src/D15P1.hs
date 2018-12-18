@@ -48,7 +48,7 @@ nextRound positions (cnt, npcs) = (cnt + 1, getNpcs . foldl' takeTurn npcBoard $
                         Nothing -> Open p
                         (Just i) -> addOccupied $ S.index npcs i
         addOccupied n = Occupied n (nPos n) (nHP n)
-        getNpcs board = S.filter ((>0) . nHP) $ S.fromList [ n { nPos = p, nHP = hp } | (Occupied n p hp) <- toList board ]
+        getNpcs board = S.fromList [ n { nPos = p, nHP = hp } | (Occupied n p hp) <- toList board, hp > 0 ]
         
 takeTurn :: S.Seq BoardPosition -> Npc -> S.Seq BoardPosition
 takeTurn board npc = maybe board (attack board . move board) $ findNpc (toList board)
@@ -90,12 +90,12 @@ freeDistances src board = getFree (0, ([src], foldr freePos [] board), [])
 attack :: S.Seq BoardPosition -> (Npc, Coordinate, Int) -> S.Seq BoardPosition
 attack board (npc, pos, hp) = hit . groupBy ((==) `on` snd) $ sortBy (comparing snd) closeEnemies
     where
-        hit enemies = if (null enemies) then moveNpc board else moveNpc $ hitE (head . sortBy (cmpByReading id) . map fst $ head enemies)
+        hit enemies = if (null enemies) then moveNpc board else moveNpc $ hitE (head . sort . map fst $ head enemies)
         hitE p = fmap (putEnemy p) board
         putEnemy p' bp@(Occupied n p h) = if (p == p') then Occupied n p (h - attackPower) else bp
         putEnemy _ bp = bp
         moveNpc b = if (nPos npc) == pos then b else fmap putNpc b
-        putNpc bp@(Occupied n p _) = if (n == npc) then Open p else bp
+        putNpc bp@(Occupied n p _) = if (n == npc) then Open p else (if (p == pos) then Occupied npc p hp else bp)
         putNpc bp@(Open p) = if (p == pos) then Occupied npc p hp else bp
         closeEnemies = filter (closePositions pos . fst) $ findEnemies npc board
 
@@ -111,10 +111,7 @@ findEnemies npc = toList . fmap stats . S.filter enemy
         stats (Occupied _ p hp) = (p, hp)
 
 cmpListByReading :: [Coordinate] -> [Coordinate] -> Ordering
-cmpListByReading a b = (comparing length a b) <> (compare (map fst a) (map fst b)) <> (compare (map snd a) (map snd b))
-
-cmpByReading :: (b -> Coordinate) -> b -> b -> Ordering
-cmpByReading f = (comparing $ fst . f) <> (comparing $ snd . f)
+cmpListByReading a b = (comparing length a b) <> (compare (reverse a) (reverse b))
 
 parseBoard :: String -> (S.Seq Coordinate, S.Seq Npc)
 parseBoard = fst . foldl' parsePoint ((S.empty, S.empty), (0, 0))
