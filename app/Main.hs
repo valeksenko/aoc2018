@@ -1,12 +1,10 @@
 module Main where
 
-import qualified Data.Sequence as S
-import D15
-import D15P2
+import D18P1
 
 main :: IO ()
 main = do
-    f <- readFile "data/d15.txt"
+    f <- readFile "data/d18.txt"
     putStrLn . show $ let
-                        (board, npcs) = parseBoard f
-                      in optimizedbattlescore board npcs
+                        acres = parseAcres f
+                      in lumbervalue acres
