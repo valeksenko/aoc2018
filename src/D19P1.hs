@@ -18,6 +18,21 @@ backgroundprog (iPtr, program) = let
     in result $ until outOfBound runStep (S.replicate registerABmount 0)
 
 {-
+Part two runs forever so after a while:
+
+[0,196859,10551432,1,0,8]
+
+#2 keeps the biggest number
+#1 resets after it reaches (#2 + 1)
+#3 increments when #1 > #2
+#0 goes up by #3 every time (#3 * #1) == #2
+the end is when #3 > #2
+
+so ... Sum of 10551432 divisors: 27024480.   32 divisors: 
+1 2 3 4 6 8 12 24 41 82 123 164 246 328 492 984 10723 21446 32169 42892 64338 85784 128676 257352 439643 879286 1318929 1758572 2637858 3517144 5275716 10551432
+-}
+
+{-
 https://adventofcode.com/2018/day/19
 
 You can't help but notice that the device's opcodes don't contain any flow control like jump instructions. The device's manual goes on to explain:
@@ -58,4 +73,9 @@ The instruction pointer is 2, which points at the instruction addi 0 1 0. This i
 The instruction pointer is 4, so the instruction setr 1 0 0 is run. This is like an absolute jump: it copies the value contained in register 1, 5, into register 0, which causes it to end up in the instruction pointer. The instruction pointer is then incremented, leaving it at 6.
 The instruction pointer is 6, so the instruction seti 9 0 5 stores 9 into register 5. The instruction pointer is incremented, causing it to point outside the program, and so the program ends.
 What value is left in register 0 when the background process halts?
+
+--- Part Two ---
+A new background process immediately spins up in its place. It appears identical, but on closer inspection, you notice that this time, register 0 started with the value 1.
+
+What value is left in register 0 when this new background process halts?
 -}
