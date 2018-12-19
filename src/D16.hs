@@ -2,6 +2,7 @@ module D16 (
     runSample
   , runProgram
   , allInstructions
+  , execOp
   , InstructionSet(..)
   , Register
   , Address
