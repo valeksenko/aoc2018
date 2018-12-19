@@ -14,7 +14,7 @@ optimizedbattlescore positions initNpcs  = fst . snd $ until elvesLive battle (3
         elvesLive (_, (_, liveE)) = liveE == countElves initNpcs
         battle (attackPower, _) = result attackPower $ until winnerOnly (nextRound (attackPower, 3) positions) (0, initNpcs)
         winnerOnly (_, npcs) = (== 1) . length . group . sort . toList $ fmap nType npcs
-        result attackPower (cnt, npcs) = (attackPower + 1, ((cnt - 1) * (sum . toList $ fmap nHP npcs), countElves npcs))
+        result attackPower (cnt, npcs) = (attackPower + 1, (cnt * (sum . toList $ fmap nHP npcs), countElves npcs))
         countElves = S.length . S.filter (\n -> nType n == Elf)
 
 {-

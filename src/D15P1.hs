@@ -11,7 +11,7 @@ battlescore :: S.Seq Coordinate -> S.Seq Npc -> Int
 battlescore positions npcs  = score $ until winnerOnly (nextRound (3, 3) positions) (0, npcs)
     where
         winnerOnly (_, npcs) = (== 1) . length . group . sort . toList $ fmap nType npcs
-        score (cnt, npcs) = (cnt - 1) * (sum . toList $ fmap nHP npcs)
+        score (cnt, npcs) = cnt * (sum . toList $ fmap nHP npcs)
 
 {-
 https://adventofcode.com/2018/day/15

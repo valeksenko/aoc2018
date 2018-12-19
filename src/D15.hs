@@ -8,6 +8,7 @@ module D15 (
 
 import Data.List
 import Data.Maybe
+import Data.Either
 import Data.Function (on)
 import Data.Monoid ((<>))
 import Data.Ord
@@ -35,7 +36,7 @@ data Npc =
 initialHP = 200
 
 nextRound :: (Int, Int) -> S.Seq Coordinate -> (Int, S.Seq Npc) -> (Int, S.Seq Npc)
-nextRound attackPowers positions (cnt, npcs) = (cnt + 1, getNpcs . foldl' (takeTurn attackPowers) npcBoard $ S.sortOn nPos npcs)
+nextRound attackPowers positions (cnt, npcs) = roundResult . foldl' turn (Left npcBoard) $ S.sortOn nPos npcs
     where
         npcBoard = foldr (\p b -> boardP p <| b) S.empty positions
         boardP p = case (S.elemIndexL p $ fmap nPos npcs) of
@@ -43,9 +44,14 @@ nextRound attackPowers positions (cnt, npcs) = (cnt + 1, getNpcs . foldl' (takeT
                         (Just i) -> addOccupied $ S.index npcs i
         addOccupied n = Occupied n (nPos n) (nHP n)
         getNpcs board = S.fromList [ n { nPos = p, nHP = hp } | (Occupied n p hp) <- toList board, hp > 0 ]
+        turn (Left board) npc = takeTurn attackPowers board npc
+        turn (Right board) _ = Right board
+        roundResult (Left board) = (cnt + 1, getNpcs board)
+        roundResult (Right board) = (cnt, getNpcs board)
+
         
-takeTurn :: (Int, Int) -> S.Seq BoardPosition -> Npc -> S.Seq BoardPosition
-takeTurn attackPowers board npc = maybe board (attack attackPower board . move board) $ findNpc (toList board)
+takeTurn :: (Int, Int) -> S.Seq BoardPosition -> Npc -> Either (S.Seq BoardPosition) (S.Seq BoardPosition)
+takeTurn attackPowers board npc = maybe (Left board) (attack attackPower board . move board) $ findNpc (toList board)
     where
         findNpc [] = Nothing
         findNpc ((Occupied n p hp):xs) = if n == npc
@@ -82,9 +88,11 @@ freeDistances src board = getFree (0, ([src], foldr freePos [] board), [])
         freePos (Open p) l = p:l
         freePos (Occupied _ p hp) l = if hp > 0 then l else p:l
 
-attack :: Int -> S.Seq BoardPosition -> (Npc, Coordinate, Int) -> S.Seq BoardPosition
-attack attackPower board (npc, pos, hp) = hit . groupBy ((==) `on` snd) $ sortBy (comparing snd) closeEnemies
+attack :: Int -> S.Seq BoardPosition -> (Npc, Coordinate, Int) -> Either (S.Seq BoardPosition) (S.Seq BoardPosition)
+attack attackPower board (npc, pos, hp) = attackE $  findEnemies npc board
     where
+        attackE [] = Right board
+        attackE l = Left . hit . groupBy ((==) `on` snd) . sortBy (comparing snd) $ filter (closePositions pos . fst) l
         hit enemies = if (null enemies) then moveNpc board else moveNpc $ hitE (head . sort . map fst $ head enemies)
         hitE p = fmap (putEnemy p) board
         putEnemy p' bp@(Occupied n p h) = if (p == p') then Occupied n p (h - attackPower) else bp
@@ -92,12 +100,10 @@ attack attackPower board (npc, pos, hp) = hit . groupBy ((==) `on` snd) $ sortBy
         moveNpc b = if (nPos npc) == pos then b else fmap putNpc b
         putNpc bp@(Occupied n p _) = if (n == npc) then Open p else (if (p == pos) then Occupied npc p hp else bp)
         putNpc bp@(Open p) = if (p == pos) then Occupied npc p hp else bp
-        closeEnemies = filter (closePositions pos . fst) $ findEnemies npc board
 
 closePositions :: Coordinate -> Coordinate -> Bool
 closePositions (y1, x1) (y2, x2) = ((x1 == x2) && (abs (y1 - y2) <= 1)) || ((abs (x1 - x2) <= 1) && (y1 == y2))
 
--- TODO: stop if no more enemies and don't count this round as active
 findEnemies :: Npc -> S.Seq BoardPosition -> [(Coordinate, Int)]
 findEnemies npc = toList . fmap stats . S.filter enemy
     where
