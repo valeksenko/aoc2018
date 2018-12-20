@@ -3,22 +3,40 @@ module D17P1 (
 ) where
 
 import Data.List
-import qualified Data.Sequence as S
+import qualified Data.Vector as V
 import Data.Foldable (toList)
+import Control.Applicative
 
 type Coordinate = (Int, Int)
 
+data Tile
+    = Water Coordinate
+    | Clay Coordinate
+    | Sand Coordinate
+    deriving(Show, Eq)
+
 spring = (0, 500)
 
-tilecount :: S.Seq Coordinate -> Int
+tilecount :: V.Vector Coordinate -> Int
 tilecount clayTiles = fst $ let
         minY = minimum $ fmap fst clayTiles
         maxY = maximum $ fmap fst clayTiles
-        filled (prevCnt, water) = prevCnt == S.length water
-    in until filled (addWater clayTiles minY maxY) (0, S.empty)
+        filled (prevCnt, water) = prevCnt == V.length water
+    in until filled (addWater clayTiles minY maxY) (0, V.empty)
 
-addWater :: S.Seq Coordinate -> Int -> Int -> (Int, S.Seq Coordinate) -> (Int, S.Seq Coordinate)
-addWater clayTiles minY maxY (_, waterTiles) = (S.length waterTiles, waterTiles)
+addWater :: V.Vector Coordinate -> Int -> Int -> (Int, V.Vector Coordinate) -> (Int, V.Vector Coordinate)
+addWater clayTiles minY maxY (_, waterTiles) = (V.length waterTiles, waterTiles)
+
+nextMove :: Tile -> V.Vector Tile -> Maybe Coordinate
+nextMove (Water (y, x)) tiles = tryDown <|> tryLeft <|> tryRight
+    where
+        tryDown = freeTile (y + 1, x)
+        tryLeft = freeTile (y, x - 1) *> solidTile (y + 1, x)
+        tryRight = freeTile (y, x + 1) *> solidTile (y + 1, x)
+        freeTile p = maybeTile p Sand
+        solidTile p = maybeTile p Clay <|> maybeTile p Water
+        maybeTile p t = if V.elem (t p) tiles then Just p else Nothing
+
 {-
 https://adventofcode.com/2018/day/17
 
