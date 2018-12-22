@@ -5,7 +5,6 @@ module D19P1 (
 import D16
 import Data.Sequence (index)
 import qualified Data.Sequence as S
-import Debug.Trace
 
 backgroundprog :: Int -> [InstructionSet] -> [Register] -> Int
 backgroundprog iPtr program initRegisters = let
@@ -13,9 +12,8 @@ backgroundprog iPtr program initRegisters = let
         prog = S.fromList program
         progSize = length program
         outOfBound registers = (registers `index` iPtr) >= progSize
-        debugRunStep registers = (if (registers `index` iPtr) == (progSize - 2) then traceShowId else id) $ runStep registers
         runStep registers = S.adjust (+1) iPtr . execOp registers . index prog $ registers `index` iPtr
-    in result $ until outOfBound debugRunStep (S.fromList initRegisters)
+    in result $ until outOfBound runStep (S.fromList initRegisters)
 
 {-
 Part two runs forever so after a while:

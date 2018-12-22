@@ -1,0 +1,94 @@
+module D22P1 (
+    risklevel
+) where
+
+import Data.List
+import Data.Sequence ((|>), Seq((:|>)))
+import qualified Data.Sequence as S
+import Data.Foldable (toList)
+import Control.Applicative
+import Debug.Trace
+
+type Coordinate = (Int, Int)
+type ErosionLevel = Int
+
+data Region = Rocky | Wet | Narrow deriving(Show, Eq)
+
+risklevel :: Int -> Coordinate -> Int
+risklevel depth targetP = sum . mapRisks $ mapCave depth targetP
+    where
+        mapRisks = concat . fmap (toList . fmap risk)
+        risk (r, _) = case r of
+                    Rocky -> 0
+                    Wet -> 1
+                    Narrow -> 2
+
+mapCave :: Int -> Coordinate -> S.Seq (S.Seq (Region, Int))
+mapCave depth targetP = foldl' mapRow S.empty [0..snd targetP]
+    where
+        mapRow cave y = cave |> foldl' (mapRegion cave y) S.empty [0..fst targetP]
+        mapRegion cave y row x = row |> region cave row (x, y)
+        erosionLevel geoInd = (geoInd + depth) `mod` 20183
+        region _ _ (0, 0) = regionType 0
+        region _ _ (0, y) = regionType $ y * 48271
+        region _ _ (x, 0) = regionType $ x * 16807
+        region (_ :|> prevRow) (_ :|> (_, prevEl)) p@(x, y) = regionType $ if p == targetP then 0 else prevEl * (snd $ S.index prevRow x)
+        regionType geoInd = let
+                el = erosionLevel geoInd
+            in case (el `mod` 3) of
+                0 -> (Rocky, el)
+                1 -> (Wet, el)
+                2 -> (Narrow, el)
+
+
+
+{-
+https://adventofcode.com/2018/day/22
+
+The cave is divided into square regions which are either dominantly rocky, narrow, or wet (called its type). Each region occupies exactly one coordinate in X,Y format where X and Y are integers and zero or greater. (Adjacent regions can be the same type.)
+
+The scan (your puzzle input) is not very detailed: it only reveals the depth of the cave system and the coordinates of the target. However, it does not reveal the type of each region. The mouth of the cave is at 0,0.
+
+The man explains that due to the unusual geology in the area, there is a method to determine any region's type based on its erosion level. The erosion level of a region can be determined from its geologic index. The geologic index can be determined using the first rule that applies from the list below:
+
+The region at 0,0 (the mouth of the cave) has a geologic index of 0.
+The region at the coordinates of the target has a geologic index of 0.
+If the region's Y coordinate is 0, the geologic index is its X coordinate times 16807.
+If the region's X coordinate is 0, the geologic index is its Y coordinate times 48271.
+Otherwise, the region's geologic index is the result of multiplying the erosion levels of the regions at X-1,Y and X,Y-1.
+A region's erosion level is its geologic index plus the cave system's depth, all modulo 20183. Then:
+
+If the erosion level modulo 3 is 0, the region's type is rocky.
+If the erosion level modulo 3 is 1, the region's type is wet.
+If the erosion level modulo 3 is 2, the region's type is narrow.
+For example, suppose the cave system's depth is 510 and the target's coordinates are 10,10. Using % to represent the modulo operator, the cavern would look as follows:
+
+At 0,0, the geologic index is 0. The erosion level is (0 + 510) % 20183 = 510. The type is 510 % 3 = 0, rocky.
+At 1,0, because the Y coordinate is 0, the geologic index is 1 * 16807 = 16807. The erosion level is (16807 + 510) % 20183 = 17317. The type is 17317 % 3 = 1, wet.
+At 0,1, because the X coordinate is 0, the geologic index is 1 * 48271 = 48271. The erosion level is (48271 + 510) % 20183 = 8415. The type is 8415 % 3 = 0, rocky.
+At 1,1, neither coordinate is 0 and it is not the coordinate of the target, so the geologic index is the erosion level of 0,1 (8415) times the erosion level of 1,0 (17317), 8415 * 17317 = 145722555. The erosion level is (145722555 + 510) % 20183 = 1805. The type is 1805 % 3 = 2, narrow.
+At 10,10, because they are the target's coordinates, the geologic index is 0. The erosion level is (0 + 510) % 20183 = 510. The type is 510 % 3 = 0, rocky.
+Drawing this same cave system with rocky as ., wet as =, narrow as |, the mouth as M, the target as T, with 0,0 in the top-left corner, X increasing to the right, and Y increasing downward, the top-left corner of the map looks like this:
+
+M=.|=.|.|=.|=|=.
+.|=|=|||..|.=...
+.==|....||=..|==
+=.|....|.==.|==.
+=|..==...=.|==..
+=||.=.=||=|=..|=
+|.=.===|||..=..|
+|..==||=.|==|===
+.=..===..=|.|||.
+.======|||=|=.|=
+.===|=|===T===||
+=|||...|==..|=.|
+=.=|=.=..=.||==|
+||=|=...|==.=|==
+|=.=||===.|||===
+||.|==.|.|.||=||
+Before you go in, you should determine the risk level of the area. For the the rectangle that has a top-left corner of region 0,0 and a bottom-right corner of the region containing the target, add up the risk level of each individual region: 0 for rocky regions, 1 for wet regions, and 2 for narrow regions.
+
+In the cave system above, because the mouth is at 0,0 and the target is at 10,10, adding up the risk level of all regions with an X coordinate from 0 to 10 and a Y coordinate from 0 to 10, this total is 114.
+
+What is the total risk level for the smallest rectangle that includes 0,0 and the target's coordinates?
+-}
