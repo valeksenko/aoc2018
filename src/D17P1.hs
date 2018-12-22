@@ -4,8 +4,11 @@ module D17P1 (
 
 import Data.List
 import qualified Data.Vector as V
+import qualified Data.Sequence as S
+import Data.Sequence ((|>), (<|), (><))
 import Data.Foldable (toList)
 import Control.Applicative
+import Debug.Trace
 
 type Coordinate = (Int, Int)
 
@@ -13,29 +16,44 @@ data Tile
     = Water Coordinate
     | Clay Coordinate
     | Sand Coordinate
+    | Spring Coordinate
     deriving(Show, Eq)
 
 spring = (0, 500)
 
-tilecount :: V.Vector Coordinate -> Int
-tilecount clayTiles = fst $ let
-        minY = minimum $ fmap fst clayTiles
-        maxY = maximum $ fmap fst clayTiles
-        filled (prevCnt, water) = prevCnt == V.length water
-    in until filled (addWater clayTiles minY maxY) (0, V.empty)
+tilecount :: [Coordinate] -> Int
+tilecount clayPositions = let
+        tiles = initialTiles $ V.fromList clayPositions
+    in S.length . trace (showTiles tiles) $ tiles
 
-addWater :: V.Vector Coordinate -> Int -> Int -> (Int, V.Vector Coordinate) -> (Int, V.Vector Coordinate)
-addWater clayTiles minY maxY (_, waterTiles) = (V.length waterTiles, waterTiles)
+-- nextMove :: Tile -> V.Vector Tile -> Maybe Coordinate
+-- nextMove (Water (y, x)) tiles = tryDown <|> tryLeft <|> tryRight
+--     where
+--         tryDown = freeTile (y + 1, x)
+--         tryLeft = freeTile (y, x - 1) *> notEdge (y + 1, x - 1)
+--         tryRight = freeTile (y, x + 1) *> notEdge (y + 1, x + 1)
+--         freeTile p = maybeTile p Sand
+--         maybeTile p t = if V.elem (t p) tiles then Just p else Nothing
 
-nextMove :: Tile -> V.Vector Tile -> Maybe Coordinate
-nextMove (Water (y, x)) tiles = tryDown <|> tryLeft <|> tryRight
+initialTiles :: V.Vector Coordinate -> S.Seq Tile
+initialTiles clayPositions = foldr addTile S.empty [(y,x) | y <- [0..maxY], x <- [minX..maxX]]
     where
-        tryDown = freeTile (y + 1, x)
-        tryLeft = freeTile (y, x - 1) *> solidTile (y + 1, x)
-        tryRight = freeTile (y, x + 1) *> solidTile (y + 1, x)
-        freeTile p = maybeTile p Sand
-        solidTile p = maybeTile p Clay <|> maybeTile p Water
-        maybeTile p t = if V.elem (t p) tiles then Just p else Nothing
+        minX = minimum $ fmap snd clayPositions
+        maxX = maximum $ fmap snd clayPositions
+        maxY = maximum $ fmap fst clayPositions
+        addTile p t
+            | p == spring = (Spring p) <| t
+            | V.elem p clayPositions = (Clay p) <| t
+            | otherwise = (Sand p) <| t
+
+showTiles :: S.Seq Tile -> String
+showTiles = toList . snd . foldl' toChar (0, trace "BEG!" $ S.empty)
+    where
+        addChar lines s c = (s >< (S.replicate lines '\n')) |> c
+        toChar (lastY, s) (Sand (y,_)) = (y, addChar (y - lastY) s ' ')
+        toChar (lastY, s) (Water (y,_)) = (y, addChar (y - lastY) s '~')
+        toChar (lastY, s) (Clay (y,_)) = (y, addChar (y - lastY) s '#')
+        toChar (lastY, s) (Spring (y,_)) = (y, addChar (y - lastY) s '+')
 
 {-
 https://adventofcode.com/2018/day/17
