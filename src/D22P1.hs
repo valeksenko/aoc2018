@@ -2,45 +2,18 @@ module D22P1 (
     risklevel
 ) where
 
+import D22
 import Data.List
-import Data.Sequence ((|>), Seq((:|>)))
-import qualified Data.Sequence as S
 import Data.Foldable (toList)
-import Control.Applicative
-import Debug.Trace
-
-type Coordinate = (Int, Int)
-type ErosionLevel = Int
-
-data Region = Rocky | Wet | Narrow deriving(Show, Eq)
 
 risklevel :: Int -> Coordinate -> Int
-risklevel depth targetP = sum . mapRisks $ mapCave depth targetP
+risklevel depth targetP = sum . mapRisks $ mapCave depth targetP 0
     where
         mapRisks = concat . fmap (toList . fmap risk)
-        risk (r, _) = case r of
+        risk r = case r of
                     Rocky -> 0
                     Wet -> 1
                     Narrow -> 2
-
-mapCave :: Int -> Coordinate -> S.Seq (S.Seq (Region, Int))
-mapCave depth targetP = foldl' mapRow S.empty [0..snd targetP]
-    where
-        mapRow cave y = cave |> foldl' (mapRegion cave y) S.empty [0..fst targetP]
-        mapRegion cave y row x = row |> region cave row (x, y)
-        erosionLevel geoInd = (geoInd + depth) `mod` 20183
-        region _ _ (0, 0) = regionType 0
-        region _ _ (0, y) = regionType $ y * 48271
-        region _ _ (x, 0) = regionType $ x * 16807
-        region (_ :|> prevRow) (_ :|> (_, prevEl)) p@(x, y) = regionType $ if p == targetP then 0 else prevEl * (snd $ S.index prevRow x)
-        regionType geoInd = let
-                el = erosionLevel geoInd
-            in case (el `mod` 3) of
-                0 -> (Rocky, el)
-                1 -> (Wet, el)
-                2 -> (Narrow, el)
-
-
 
 {-
 https://adventofcode.com/2018/day/22

@@ -1,7 +1,7 @@
 module Main where
 
-import D22P1
+import D22P2
 
 main :: IO ()
 main = do
-    putStrLn . show $ risklevel 10647 (7,770)
+    putStrLn . show $ minminutes 10647 (7,770)
