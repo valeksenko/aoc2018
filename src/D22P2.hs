@@ -5,19 +5,22 @@ module D22P2 (
 import D22
 import Data.List
 import Data.Foldable (toList)
+import qualified Data.Sequence as S
+import Debug.Trace
 
 data Tool = Neither | ClimbingGear | Torch deriving(Show, Eq)
 
 extraRegions = 8 -- tool change + 1 should be enough?
+caveMouth = (0, 0)
 
 minminutes :: Int -> Coordinate -> Int
-minminutes depth targetP = sum . mapRisks $ mapCave depth targetP extraRegions
+minminutes depth targetP = S.length . traceShowId . mapTools $ mapCave depth targetP extraRegions
     where
-        mapRisks = concat . fmap (toList . fmap risk)
-        risk r = case r of
-                    Rocky -> 0
-                    Wet -> 1
-                    Narrow -> 2
+        mapTools = S.mapWithIndex (\x l -> S.mapWithIndex (tools x) l)
+        tools x y r
+            | (x, y) == caveMouth = [Torch]
+            | (x, y) == targetP = [Torch]
+            | otherwise = useTool r
 
 useTool :: Region -> [Tool]
 useTool r = case r of

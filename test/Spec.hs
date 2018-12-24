@@ -75,5 +75,5 @@ tests = testGroup "Tests"
       , D22P1Spec.tests
       , D22P2Spec.tests
       , D23P1Spec.tests
-      , D23P2Spec.tests
+      -- , D23P2Spec.tests
     ]
