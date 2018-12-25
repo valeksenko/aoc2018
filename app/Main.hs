@@ -1,10 +1,11 @@
 module Main where
 
-import D24P1
+import D24
+import D24P2
 
 main :: IO ()
 main = do
-    putStrLn . show $ winningunits [
+    putStrLn . show $ boostwinningunits [
                                 Group 0 ImmuneSystem 3578 3874 [Radiation] [] 10 Bludgeoning 17
                               , Group 1 ImmuneSystem 865 10940 [] [Bludgeoning, Cold] 94 Cold 19
                               , Group 2 ImmuneSystem 3088 14516 [Cold] [] 32 Bludgeoning 4
