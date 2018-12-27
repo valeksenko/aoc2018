@@ -25,6 +25,7 @@ dependencies:
 - array
 - vector
 - extra
+- z3
 
 library:
   source-dirs: src
