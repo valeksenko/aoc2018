@@ -1,32 +1,25 @@
 module Main where
 
-import Control.Applicative
-import Z3.Monad
+import Data.SBV
 
-script :: Z3 Result
-script = do
-    a <- mkFreshIntVar "a"
-    _10 <- mkInteger 10
-    _100 <- mkInteger 100
-    true <- mkTrue
+guessNumber :: IO AllSatResult
+guessNumber = allSat $ do
+    x <- sInteger "X"
+    y <- sInteger "Y"
 
-    intSort <- mkIntSort
-    boolSort <- mkBoolSort
-    fDecl <- mkFreshFuncDecl "f" [intSort, boolSort] intSort
-    
-    assert =<< mkGt a _10
+    let num = x * 10 + y
 
-    r <- mkApp fDecl [a, true]
-    assert =<< mkLt r _100
-
-    (res, mbModel) <- getModel
-    return res
-    -- case mbModel of
-    --     Just model -> do
-    --         Just f <- evalFunc model fDecl
-    --         toRetType f
-    --     Nothing -> error ("Couldn't construct model: " ++ show res)
+    solve [
+            num .>= 1
+          , num .<= 50
+          , (num `sRem` 3) .== 0
+          , (num `sMod` 2) .== 1
+          , (x + y) .>= 4
+          , (x + y) .<= 8
+          , (x * y) .>= 4
+          , (x * y) .<= 8
+        ]
 
 main :: IO ()
 main = do
-    evalZ3 script >>= print
+    print =<< guessNumber
