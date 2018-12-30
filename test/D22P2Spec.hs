@@ -15,5 +15,5 @@ unitTests :: TestTree
 unitTests = testGroup "Unit tests"
     [
         testCase "D22P2.minminutes: gives correct answer to the original problem" $ do
-            45 @=? minminutes 510 (10, 10)
+            (Just 45) @=? minminutes 510 (10, 10)
     ]

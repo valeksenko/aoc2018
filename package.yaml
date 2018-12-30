@@ -26,6 +26,7 @@ dependencies:
 - vector
 - extra
 - sbv
+- search-algorithms
 
 library:
   source-dirs: src
