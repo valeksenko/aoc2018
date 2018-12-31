@@ -7,7 +7,7 @@ import Data.List
 import Data.Foldable (toList)
 
 risklevel :: Int -> Coordinate -> Int
-risklevel depth targetP = sum . mapRisks $ mapCave depth targetP 0
+risklevel depth targetP = sum . mapRisks $ mapCave depth targetP targetP
     where
         mapRisks = concat . fmap (toList . fmap risk)
         risk r = case r of

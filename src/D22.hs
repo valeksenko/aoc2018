@@ -12,10 +12,10 @@ type Coordinate = (Int, Int)
 
 data Region = Rocky | Wet | Narrow deriving(Show, Eq)
 
-mapCave :: Int -> Coordinate -> Int -> S.Seq (S.Seq Region)
-mapCave depth targetP extraRegions = fmap (fmap fst) $ foldl' mapRow S.empty [0..snd targetP + extraRegions]
+mapCave :: Int -> Coordinate -> Coordinate -> S.Seq (S.Seq Region)
+mapCave depth targetP (lastX, lastY) = fmap (fmap fst) $ foldl' mapRow S.empty [0..lastY]
     where
-        mapRow cave y = cave |> foldl' (mapRegion cave y) S.empty [0..fst targetP + extraRegions]
+        mapRow cave y = cave |> foldl' (mapRegion cave y) S.empty [0..lastX]
         mapRegion cave y row x = row |> region cave row (x, y)
         erosionLevel geoInd = (geoInd + depth) `mod` 20183
         region _ _ (0, 0) = regionType 0
