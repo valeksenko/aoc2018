@@ -1,36 +1,35 @@
 module D23P2 (
     shortestdistance
+  , findShortest
 ) where
 
 import Data.List
-import Data.Ord
-import Data.Function
-import Debug.Trace
-import Data.Tuple.Extra
+import Data.SBV
 
-type Coordinate = (Int, Int, Int)
-type Radius = Int
+type Coordinate = (Integer, Integer, Integer)
+type Radius = Integer
 
-shortestdistance :: Int -> [(Coordinate, Radius)] -> Int
-shortestdistance groupSize positions = let
-        inRange p1 (p2, radius) = radius >= distance p1 p2
-        closeCnt p = (p, length $ filter (inRange p) positions)
-        closest = fst . minimumBy (comparing $ distance (0,0,0) . fst)
-        closestGroup = head . groupBy ((==) `on` snd) . sortBy (comparing snd)
-    in distance (0,0,0) . closest . closestGroup . map closeCnt $ clusterPositions groupSize positions
+shortestdistance :: [(Coordinate, Radius)] -> IO Integer
+shortestdistance positions = do
+    LexicographicResult model <- optimize Lexicographic $ findShortest positions
+    case "distance" `getModelValue` model of
+        Just d -> return d
+        Nothing -> error "Unsolvable"
 
-clusterPositions :: Int -> [(Coordinate, Radius)] -> [Coordinate]
-clusterPositions groupSize positions = let
-        surroundPositions ((x,y,z), r) = [(x', y', z') | x' <- [x-r..x+r], y' <- [y-r..y+r], z' <- [z-r..z+r]]
-        debug l = traceShow (length l) l
-        inRange n@(p, r) = (n, length . filter ((<=) r) $ map (distance p . fst) positions)
-        largestGroup = map fst . concat . take groupSize . groupBy ((==) `on` snd) . sortBy (flip $ comparing snd)
-    in debug . concat . map surroundPositions . debug . largestGroup $ map inRange positions
+findShortest :: [(Coordinate, Radius)] -> Goal
+findShortest positions = do
+        [x, y, z] <- sIntegers ["X", "Y", "Z"]
 
-distance :: Coordinate -> Coordinate -> Int
-distance (x1, y1, z1) (x2, y2, z2) = let
-        calcD a b = abs $ a - b
-    in calcD x1 x2 + calcD y1 y2 + calcD z1 z2
+        let
+            isNeighbor (p, radius) = literal radius .>= distance p
+            distance (x', y', z') = calcD x x' + calcD y y' + calcD z z'
+            calcD n n' = sAbs $ n - (literal n')
+            sAbs n = ite (n .< 0) (-n) n
+            neighborCnt :: SInteger
+            neighborCnt = sum $ map (oneIf . isNeighbor) positions
+
+        maximize "neighborCount" $ neighborCnt
+        minimize "distance" $ distance (0, 0, 0)
 
 {-
 https://adventofcode.com/2018/day/23#part2

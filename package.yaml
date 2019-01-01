@@ -24,7 +24,6 @@ dependencies:
 - containers
 - array
 - vector
-- extra
 - sbv
 - search-algorithms
 
