@@ -3,6 +3,8 @@ module D17P1 (
 ) where
 
 import Data.List
+import Data.Tuple
+import Data.Maybe
 import qualified Data.Vector as V
 import qualified Data.Sequence as S
 import Data.Sequence ((|>), (<|), (><))
@@ -11,49 +13,97 @@ import Control.Applicative
 import Debug.Trace
 
 type Coordinate = (Int, Int)
+type Direction = (Int, Int)
+type AreaMap = S.Seq (S.Seq Tile)
 
-data Tile
-    = Water Coordinate
-    | Clay Coordinate
-    | Sand Coordinate
-    | Spring Coordinate
-    deriving(Show, Eq)
+data Tile = Water | Clay | Sand | Spring deriving(Show, Eq)
 
 spring = (0, 500)
+left = (0, -1)
+right = (0, 1)
+down = (1, 0)
+
 
 tilecount :: [Coordinate] -> Int
 tilecount clayPositions = let
-        tiles = initialTiles $ V.fromList clayPositions
-    in S.length . trace (showTiles tiles) $ tiles
+        (startX, tiles) = mapTiles $ V.fromList clayPositions
+        filled = (==) Water . fromJust . at aSpring
+        aSpring = (fst spring, snd spring - startX)
+        waterCount = S.length . foldr ((><) . S.filter ((==) Water)) S.empty
+        pourWater w = let p = (pour aSpring w) in trace (showTiles p) p
+    in subtract 1 . waterCount . trace (showTiles tiles) $ until filled pourWater tiles
 
--- nextMove :: Tile -> V.Vector Tile -> Maybe Coordinate
--- nextMove (Water (y, x)) tiles = tryDown <|> tryLeft <|> tryRight
---     where
---         tryDown = freeTile (y + 1, x)
---         tryLeft = freeTile (y, x - 1) *> notEdge (y + 1, x - 1)
---         tryRight = freeTile (y, x + 1) *> notEdge (y + 1, x + 1)
---         freeTile p = maybeTile p Sand
---         maybeTile p t = if V.elem (t p) tiles then Just p else Nothing
-
-initialTiles :: V.Vector Coordinate -> S.Seq Tile
-initialTiles clayPositions = foldr addTile S.empty [(y,x) | y <- [0..maxY], x <- [minX..maxX]]
+pour :: Coordinate -> AreaMap -> AreaMap
+pour start areaMap = putWater . fromJust $ freeTile areaMap down start
     where
+        putWater (y, x) = S.adjust' (S.update x Water) y areaMap
+
+freeTile :: AreaMap -> Direction -> Coordinate -> Maybe Coordinate
+freeTile areaMap dir c = try <|> Just c
+    where
+        try = case dir of
+            (1, 0)  -> tryDown areaMap c <|> trySide areaMap left c <|> trySide areaMap right c
+            (0, -1) -> tryDown areaMap c <|> trySide areaMap left c
+            (0, 1)  -> tryDown areaMap c <|> trySide areaMap right c
+
+tryDown :: AreaMap -> Coordinate -> Maybe Coordinate
+tryDown areaMap c = at (move down c) areaMap >>= go
+    where
+        go t = if t == Sand then freeTile areaMap down (move down c) else Nothing
+
+trySide :: AreaMap -> Direction -> Coordinate -> Maybe Coordinate
+trySide areaMap dir c = at (move dir c) areaMap >>= checkSide
+    where
+        checkSide t = if t == Sand then at (move down $ move dir c) areaMap >>= checkNextDown else Nothing
+        limited d = (blocked areaMap c d) || (overflow areaMap c d)
+        oppositeDir = (fst dir, negate $ snd dir)
+        checkDown = if at (move down c) areaMap == Just Clay then Just (move dir c) else Nothing
+        checkNextDown t = case t of
+            Sand -> if at (move down c) areaMap == Just Clay then freeTile areaMap down (move down $ move dir c) else Nothing
+            Clay -> freeTile areaMap dir (move dir c)
+            Water -> if (limited dir) && (limited oppositeDir) then freeTile areaMap dir (move dir c) else checkDown
+
+at :: Coordinate -> AreaMap -> Maybe Tile
+at (y, x) areaMap = S.lookup y areaMap >>= S.lookup x 
+
+move :: Direction -> Coordinate -> Coordinate
+move (y, x) (y', x') = (y + y', x + x')
+
+blocked :: AreaMap -> Coordinate -> Direction -> Bool
+blocked areaMap c dir = maybe False checkDown $ at (move down c) areaMap
+    where
+        checkDown t = if t == Sand then False else maybe False checkSide $ at (move dir c) areaMap
+        checkSide t = if t == Clay then True else blocked areaMap (move dir c) dir
+
+overflow :: AreaMap -> Coordinate -> Direction -> Bool
+overflow areaMap c dir = maybe False checkNextDown $ at (move down $ move dir c) areaMap
+    where
+        checkNextDown t = case t of
+            Sand  -> False
+            Clay  -> True
+            Water -> overflow areaMap (move dir c) dir
+
+mapTiles :: V.Vector Coordinate -> (Int, AreaMap)
+mapTiles clayPositions = (minX - 1, foldr addRow S.empty [0..maxY])
+    where
+        addRow y a = foldr (addTile y) S.empty [minX-1..maxX+1] <| a
         minX = minimum $ fmap snd clayPositions
         maxX = maximum $ fmap snd clayPositions
         maxY = maximum $ fmap fst clayPositions
-        addTile p t
-            | p == spring = (Spring p) <| t
-            | V.elem p clayPositions = (Clay p) <| t
-            | otherwise = (Sand p) <| t
+        addTile y x t
+            | spring == (y, x) = Spring <| t
+            | V.elem (y, x) clayPositions = Clay <| t
+            | otherwise = Sand <| t
 
-showTiles :: S.Seq Tile -> String
-showTiles = toList . snd . foldl' toChar (0, trace "BEG!" $ S.empty)
+showTiles :: AreaMap -> String
+showTiles = foldr showRow "\n=================\n"
     where
-        addChar lines s c = (s >< (S.replicate lines '\n')) |> c
-        toChar (lastY, s) (Sand (y,_)) = (y, addChar (y - lastY) s ' ')
-        toChar (lastY, s) (Water (y,_)) = (y, addChar (y - lastY) s '~')
-        toChar (lastY, s) (Clay (y,_)) = (y, addChar (y - lastY) s '#')
-        toChar (lastY, s) (Spring (y,_)) = (y, addChar (y - lastY) s '+')
+        showRow r s = foldr ((:) . toChar) ('\n':s) r
+        toChar t = case t of
+            Sand   -> ' '
+            Water  -> '~'
+            Clay   -> '#'
+            Spring -> '+'
 
 {-
 https://adventofcode.com/2018/day/17
