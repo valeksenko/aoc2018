@@ -5,12 +5,11 @@ module D17P2 (
 import D17
 import qualified Data.Sequence as S
 import Data.Sequence ((><))
-import Debug.Trace
 
 drainedcount :: [Coordinate] -> Int
 drainedcount = waterCount . drain . snd . fill
     where
-        waterCount l = trace (showTiles l) . S.length $ foldr ((><) . S.filter ((==) Water)) S.empty l
+        waterCount = S.length . foldr ((><) . S.filter ((==) Water)) S.empty
 
 {-
 https://adventofcode.com/2018/day/17#part2
