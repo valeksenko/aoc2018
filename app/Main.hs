@@ -1,12 +1,12 @@
 module Main where
 
-import D17P1
+import D17P2
 
 main :: IO ()
 main = do
-    -- print $ tilecount [
+    -- print $ drainedcount [
     --                 (2,495),(3,495),(4,495),(5,495),(6,495),(7,495),(8,495),(9,495),(10,495),(10,496),(10,497),(10,498),(10,499),(10,500),(10,501),(10,502),(10,503),(10,504),(10,505),(10,506),(3,506),(4,506),(5,506),(6,506),(7,506),(8,506),(9,506),(10,506),(13,505),(13,506),(4,500),(5,500),(6,500),(1,508),(2,508)
     --             ]
 
     clayData <- readFile "data/d17.bin"
-    print $ tilecount (read clayData :: [(Int, Int)])
+    print $ drainedcount (read clayData :: [(Int, Int)])
