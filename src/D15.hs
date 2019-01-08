@@ -18,6 +18,7 @@ import Data.Foldable (toList)
 import Debug.Trace
 
 type Coordinate = (Int, Int)
+type Step = (Int, Coordinate)
 
 data NpcType = Goblin | Elf deriving(Show, Eq, Ord)
 
@@ -57,7 +58,7 @@ takeTurn attackPowers board npc = maybe (Left board) (attack attackPower board .
         findNpc ((Occupied n p hp):xs) = if n == npc
                                             then (if hp > 0 then Just (n, p, hp) else Nothing)
                                             else findNpc xs
-        findNpc (x:xs) = findNpc xs
+        findNpc (_:xs) = findNpc xs
         attackPower = if (nType npc == Elf) then fst attackPowers else snd attackPowers
 
 move :: S.Seq BoardPosition -> (Npc, Coordinate, Int) -> (Npc, Coordinate, Int)
@@ -67,17 +68,25 @@ move board (npc, pos, hp) = moveNpc . closestEnemy $ findEnemies npc board
         moveNpc (Just []) = (npc, pos, hp)
         moveNpc (Just l) = (npc, head l, hp)
         closestEnemy = closestE . catMaybes . map (shortestPath board pos . fst)
-        closestE [] = Nothing
-        closestE l = Just . head $ sortBy cmpListByReading l
+        closestE l = if null l then Nothing else Just . head $ sortBy cmpListByReading l
 
 shortestPath :: S.Seq BoardPosition -> Coordinate -> Coordinate -> Maybe [Coordinate]
 shortestPath board src dst = nearDst $ freeDistances src board
     where
         nearDst available = findPath available . sortBy (comparing fst) $ filter (closePositions dst . snd) available
         findPath _ [] = Nothing
-        findPath available closest = Just . init $ foldr (nextStep available) [dst] [1..fst $ head closest]
-        nextStep available distance l@(pDst:_) = flip (:) l (head . filter (flip any available . closeDistance (distance - 1)) . sort . map snd $ filter (closeDistance distance pDst) available)
-        closeDistance distance pDst (d, p) = (d == distance) && (closePositions p pDst)
+        findPath available (closest:_) = Just $ findP (allSteps closest available) (fst closest)
+        findP steps d = tail $ foldl' (nextStep steps) [src] [1..d]
+        nextStep steps l distance = l ++ [head . sort . map snd $ filter (neighbor distance $ last l) steps]
+
+allSteps :: Step -> [Step] -> [Step]
+allSteps dst@(dD, cD) steps = foldr reachable [dst] [1..dD - 1]
+    where
+        reachable d l = l ++ filter (canReach d l) steps
+        canReach d l (d', c) = (d == d') && (any (neighbor (d + 1) c) l)
+
+neighbor :: Int -> Coordinate -> Step -> Bool
+neighbor d c (d', c') = (d == d') && (closePositions c c')
 
 freeDistances :: Coordinate -> S.Seq BoardPosition -> [(Int, Coordinate)]
 freeDistances src board = getFree (0, ([src], foldr freePos [] board), [])
