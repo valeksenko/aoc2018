@@ -15,10 +15,10 @@ import Data.Ord
 import Data.Sequence ((|>), (<|))
 import qualified Data.Sequence as S
 import Data.Foldable (toList)
+import Algorithm.Search (dijkstra)
 import Debug.Trace
 
 type Coordinate = (Int, Int)
-type Step = (Int, Coordinate)
 
 data NpcType = Goblin | Elf deriving(Show, Eq, Ord)
 
@@ -49,7 +49,6 @@ nextRound attackPowers positions (cnt, npcs) = roundResult . foldl' turn (Left n
         turn (Right board) _ = Right board
         roundResult (Left board) = (cnt + 1, getNpcs board)
         roundResult (Right board) = (cnt, getNpcs board)
-
         
 takeTurn :: (Int, Int) -> S.Seq BoardPosition -> Npc -> Either (S.Seq BoardPosition) (S.Seq BoardPosition)
 takeTurn attackPowers board npc = maybe (Left board) (attack attackPower board . move board) $ findNpc (toList board)
@@ -62,40 +61,26 @@ takeTurn attackPowers board npc = maybe (Left board) (attack attackPower board .
         attackPower = if (nType npc == Elf) then fst attackPowers else snd attackPowers
 
 move :: S.Seq BoardPosition -> (Npc, Coordinate, Int) -> (Npc, Coordinate, Int)
-move board (npc, pos, hp) = moveNpc . closestEnemy $ findEnemies npc board
+move board (npc, pos, hp) = moveNpc $ nextPos $ findEnemies npc board
     where 
         moveNpc Nothing = (npc, pos, hp)
-        moveNpc (Just []) = (npc, pos, hp)
-        moveNpc (Just l) = (npc, head l, hp)
-        closestEnemy = closestE . catMaybes . map (shortestPath board pos . fst)
-        closestE l = if null l then Nothing else Just . head $ sortBy cmpListByReading l
+        moveNpc (Just p) = (npc, p, hp)
+        nextPos l = if any (closePositions pos . fst) l then Nothing else closestE $ concatMap (allPaths board pos . fst) l
+        closestE l = if null l then Nothing else Just . startPos . head $ sortBy cmpListByReading l
+        startPos l = head . filter (bestPath (last l) (length l)) . sort $ freeNeighbors board pos
+        bestPath dP maxL sP = any ((>) maxL . length) $ allPaths board sP dP
 
-shortestPath :: S.Seq BoardPosition -> Coordinate -> Coordinate -> Maybe [Coordinate]
-shortestPath board src dst = nearDst $ freeDistances src board
+allPaths :: S.Seq BoardPosition -> Coordinate -> Coordinate -> [[Coordinate]]
+allPaths board src = map snd . catMaybes . map shortest . freeNeighbors board
     where
-        nearDst available = findPath available . sortBy (comparing fst) $ filter (closePositions dst . snd) available
-        findPath _ [] = Nothing
-        findPath available (closest:_) = Just $ findP (allSteps closest available) (fst closest)
-        findP steps d = tail $ foldl' (nextStep steps) [src] [1..d]
-        nextStep steps l distance = l ++ [head . sort . map snd $ filter (neighbor distance $ last l) steps]
+        shortest p = dijkstra (freeNeighbors board) cost ((==) p) src
+        cost _ _ = 1
 
-allSteps :: Step -> [Step] -> [Step]
-allSteps dst@(dD, cD) steps = foldr reachable [dst] [1..dD - 1]
+freeNeighbors :: S.Seq BoardPosition -> Coordinate -> [Coordinate]
+freeNeighbors board dst = filter (closePositions dst) . catMaybes . toList $ fmap freeN board
     where
-        reachable d l = l ++ filter (canReach d l) steps
-        canReach d l (d', c) = (d == d') && (any (neighbor (d + 1) c) l)
-
-neighbor :: Int -> Coordinate -> Step -> Bool
-neighbor d c (d', c') = (d == d') && (closePositions c c')
-
-freeDistances :: Coordinate -> S.Seq BoardPosition -> [(Int, Coordinate)]
-freeDistances src board = getFree (0, ([src], foldr freePos [] board), [])
-    where
-        getFree (distance, (seeds, available), collected) = if null seeds then collected else getFree (distance + 1, foldr closeFree ([], available) seeds, collected ++ zip (repeat distance) seeds)
-        closeFree p (collected, available) = addFree collected $ partition (closePositions p) available
-        addFree collected (closeP, farP) = (collected ++ closeP, farP)
-        freePos (Open p) l = p:l
-        freePos (Occupied _ p hp) l = if hp > 0 then l else p:l
+        freeN (Open p) = Just p
+        freeN (Occupied _ p hp) = if hp > 0 then Nothing else Just p
 
 attack :: Int -> S.Seq BoardPosition -> (Npc, Coordinate, Int) -> Either (S.Seq BoardPosition) (S.Seq BoardPosition)
 attack attackPower board (npc, pos, hp) = attackE $  findEnemies npc board
